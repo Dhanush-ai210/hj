@@ -1,0 +1,41 @@
+name: Authenticate with Keycloak
+
+on: 
+  push:
+    branches:
+      - main
+
+jobs:
+  authenticate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Authenticate with Keycloak
+      run: |
+        TOKEN_RESPONSE=$(curl -X POST "$KEYCLOAK_URL" \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "client_id=$KEYCLOAK_CLIENT_ID" \
+          -d "client_secret=$KEYCLOAK_CLIENT_SECRET" \
+          -d "username=$KEYCLOAK_USERNAME" \
+          -d "password=$KEYCLOAK_PASSWORD" \
+          -d "grant_type=password")
+        
+        ACCESS_TOKEN=$(echo $TOKEN_RESPONSE | jq -r .access_token)
+
+        if [ "$ACCESS_TOKEN" == "null" ]; then
+          echo "Failed to authenticate with Keycloak!"
+          exit 1
+        fi
+
+        echo "Successfully authenticated with Keycloak!"
+        echo "::add-mask::$ACCESS_TOKEN"
+        
+      env:
+        KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL }}
+        KEYCLOAK_CLIENT_ID: ${{ secrets.KEYCLOAK_CLIENT_ID }}
+        KEYCLOAK_CLIENT_SECRET: ${{ secrets.KEYCLOAK_CLIENT_SECRET }}
+        KEYCLOAK_USERNAME: ${{ secrets.KEYCLOAK_USERNAME }}
+        KEYCLOAK_PASSWORD: ${{ secrets.KEYCLOAK_PASSWORD }}
